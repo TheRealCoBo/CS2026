@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Commission Review</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf8f5;
+    --bg-card: #ffffff;
+    --bg-elevated: #f3f0eb;
+    --border: #e8e3db;
+    --border-strong: #d4cdc2;
+    --text: #1a1714;
+    --text-dim: #6b6560;
+    --text-muted: #a09890;
+    --accent: #c45c2e;
+    --accent-light: #f5ede8;
+    --green: #2d7a4f;
+    --green-light: #e8f5ee;
+    --red: #c0392b;
+    --shadow: 0 2px 16px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 40px rgba(0,0,0,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+  .app { max-width: 680px; margin: 0 auto; padding: 0 0 100px; }
+
+  /* Header */
+  .header { background: var(--text); color: #fff; padding: 28px 24px 22px; position: sticky; top: 0; z-index: 100; }
+  .header h1 { font-family: 'DM Serif Display', serif; font-size: 26px; font-weight: 400; letter-spacing: -0.02em; }
+  .header h1 em { color: #d4a574; font-style: italic; }
+  .header .meta { font-size: 12px; color: rgba(255,255,255,0.55); margin-top: 4px; letter-spacing: 0.04em; text-transform: uppercase; }
+  .header .summary-strip { display: flex; gap: 20px; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.1); }
+  .header .summary-strip .s-item { font-size: 11px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.06em; }
+  .header .summary-strip .s-val { font-size: 18px; font-weight: 600; color: #fff; display: block; margin-top: 2px; }
+
+  /* Sections */
+  .section-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); padding: 20px 20px 8px; }
+
+  /* Rep cards */
+  .rep-card { background: var(--bg-card); border-bottom: 1px solid var(--border); padding: 18px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.15s; gap: 12px; }
+  .rep-card:hover { background: var(--bg-elevated); }
+  .rep-card.modified { border-left: 3px solid var(--accent); }
+  .rep-card .rep-name { font-family: 'DM Serif Display', serif; font-size: 18px; letter-spacing: -0.01em; }
+  .rep-card .rep-meta { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+  .rep-card .rep-total { text-align: right; }
+  .rep-card .rep-total .amount { font-size: 20px; font-weight: 600; color: var(--text); }
+  .rep-card .rep-total .amount.changed { color: var(--accent); }
+  .rep-card .rep-total .original { font-size: 11px; color: var(--text-muted); text-decoration: line-through; }
+  .rep-card .chevron { color: var(--text-muted); font-size: 18px; }
+
+  /* Detail view */
+  .detail-header { background: var(--text); color: #fff; padding: 20px 20px 18px; position: sticky; top: 0; z-index: 100; }
+  .detail-header .back { font-size: 12px; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer; margin-bottom: 10px; display: inline-flex; align-items: center; gap: 6px; }
+  .detail-header h2 { font-family: 'DM Serif Display', serif; font-size: 22px; font-weight: 400; }
+  .detail-header .dtotal { font-size: 14px; color: rgba(255,255,255,0.6); margin-top: 4px; }
+  .detail-header .dtotal strong { color: #fff; }
+
+  /* Line items */
+  .line-item { background: var(--bg-card); border-bottom: 1px solid var(--border); padding: 16px 20px; }
+  .line-item.deleted { opacity: 0.4; background: #fdf0ee; }
+  .line-item .li-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .line-item .customer { font-weight: 600; font-size: 14px; }
+  .line-item .revenue-badge { background: var(--bg-elevated); border: 1px solid var(--border); color: var(--text-dim); font-size: 11px; padding: 3px 8px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
+  .line-item .li-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .line-item .li-fields.three { grid-template-columns: 1fr 1fr 100px; }
+  .field-group label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); display: block; margin-bottom: 4px; }
+  .field-group input, .field-group select {
+    width: 100%; background: var(--bg-elevated); color: var(--text); border: 1px solid var(--border-strong);
+    padding: 8px 10px; font-family: 'DM Sans', sans-serif; font-size: 13px; border-radius: 6px; outline: none;
+  }
+  .field-group input:focus, .field-group select:focus { border-color: var(--accent); background: #fff; }
+  .field-group input.pay-field { font-weight: 600; }
+  .field-group input.pay-field:focus { border-color: var(--green); }
+  .li-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+  .del-btn { background: none; border: 1px solid var(--border); color: var(--text-muted); padding: 5px 12px; font-size: 11px; border-radius: 4px; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+  .del-btn:hover { border-color: var(--red); color: var(--red); }
+  .restore-btn { background: none; border: 1px solid var(--border); color: var(--accent); padding: 5px 12px; font-size: 11px; border-radius: 4px; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+
+  /* Add item */
+  .add-item-row { padding: 14px 20px; background: var(--accent-light); border-bottom: 1px solid var(--border); }
+  .add-item-row .add-fields { display: grid; grid-template-columns: 1fr 1fr 100px; gap: 8px; margin-bottom: 8px; }
+  .add-item-row input, .add-item-row select {
+    width: 100%; background: #fff; color: var(--text); border: 1px solid var(--border-strong);
+    padding: 7px 10px; font-family: 'DM Sans', sans-serif; font-size: 13px; border-radius: 6px; outline: none;
+  }
+  .add-item-row input:focus, .add-item-row select:focus { border-color: var(--accent); }
+  .add-item-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* Buttons */
+  .btn { background: var(--bg-elevated); color: var(--text); border: 1px solid var(--border-strong); padding: 9px 16px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; border-radius: 6px; cursor: pointer; transition: all 0.15s; }
+  .btn:hover { border-color: var(--text); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.primary:hover { background: #a84d26; }
+  .btn.small { padding: 6px 12px; font-size: 12px; }
+
+  /* Add line item floating button */
+  .add-fab { position: fixed; bottom: 90px; right: 20px; background: var(--text); color: #fff; border: none; width: 48px; height: 48px; border-radius: 50%; font-size: 24px; cursor: pointer; box-shadow: var(--shadow-lg); display: flex; align-items: center; justify-content: center; transition: all 0.2s; z-index: 50; }
+  .add-fab:hover { background: var(--accent); transform: scale(1.05); }
+
+  /* Submit bar */
+  .submit-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--text); padding: 14px 20px; display: flex; gap: 12px; align-items: center; justify-content: space-between; z-index: 100; }
+  .submit-bar .change-count { font-size: 12px; color: rgba(255,255,255,0.5); }
+  .submit-bar .change-count strong { color: #fff; }
+  .submit-btn { background: var(--accent); color: #fff; border: none; padding: 12px 28px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; border-radius: 8px; cursor: pointer; transition: background 0.2s; }
+  .submit-btn:hover { background: #a84d26; }
+  .submit-btn:disabled { background: rgba(255,255,255,0.2); color: rgba(255,255,255,0.4); cursor: default; }
+
+  /* Code modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .modal { background: var(--bg-card); border-radius: 16px; padding: 28px; width: 100%; max-width: 460px; box-shadow: var(--shadow-lg); }
+  .modal h3 { font-family: 'DM Serif Display', serif; font-size: 22px; margin-bottom: 8px; }
+  .modal p { font-size: 13px; color: var(--text-dim); margin-bottom: 16px; line-height: 1.6; }
+  .code-box { background: var(--bg-elevated); border: 1px solid var(--border-strong); border-radius: 8px; padding: 14px; font-family: monospace; font-size: 12px; word-break: break-all; line-height: 1.5; color: var(--text); user-select: all; margin-bottom: 16px; max-height: 180px; overflow-y: auto; }
+  .copy-confirm { color: var(--green); font-size: 13px; font-weight: 500; display: none; margin-bottom: 10px; }
+
+  /* Empty */
+  .empty { text-align: center; padding: 48px 20px; color: var(--text-muted); }
+  .empty .e-icon { font-size: 40px; margin-bottom: 10px; }
+
+  @media (max-width: 480px) {
+    .line-item .li-fields { grid-template-columns: 1fr; }
+    .line-item .li-fields.three { grid-template-columns: 1fr 1fr; }
+    .add-item-row .add-fields { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+// ── embedded data ──────────────────────────────────────────
+const PERIOD   = {"from":"4/13/2026","to":"4/19/2026"};
+const OFFICE   = "Highline Management Team, Inc.";
+const ROSTER   = ["Aimee Garibay-Gutierrez","Alyssa Adkins","Andrew Beimler","Brandon Campo","Cameron Miller","Celesté Lewis","Isabella White","Jaime Costello","Maximilian Allen","Meredith Mallory Iv","Michael Gutierrez","Robert Moser","Sohaib Hafeez","Terrel Watson","Thomas Crenshaw","Tyler Gosselin","Yaden Diaz"];
+const RAW_REPS = [{"rep":"Brandon Campo","total":250,"items":[{"id":0,"customer":"3rd Eye Surveillance System","revenue":310,"rep":"Brandon Campo","description":"Broker Fee 2","detail":"Above 40k TX","repPay":110,"saleDate":"4/2/2026","actDate":"4/6/2026","category":"ELE","status":"Accepted By Supplier"},{"id":1,"customer":"3rd Eye Surveillance System","revenue":80,"rep":"Brandon Campo","description":"kWH Bonus","detail":"50-55k TX","repPay":35,"saleDate":"4/2/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":2,"customer":"3rd Eye Surveillance System","revenue":100,"rep":"Brandon Campo","description":"Rep Volume Bonus","detail":"Tier 1","repPay":40,"saleDate":"4/2/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":3,"customer":"3rd Eye Surveillance System","revenue":150,"rep":"Brandon Campo","description":"Term Length Bonus","detail":"36 Month +","repPay":65,"saleDate":"4/2/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"}]},{"rep":"Sohaib Hafeez","total":3515,"items":[{"id":0,"customer":"4 Seasons Nails","revenue":275,"rep":"Sohaib Hafeez","description":"Broker Fee 2","detail":"Below 40k TX","repPay":120,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"ELE","status":"Accepted By Supplier"},{"id":1,"customer":"4 Seasons Nails","revenue":130,"rep":"Sohaib Hafeez","description":"Rep Volume Bonus","detail":"Tier 2","repPay":120,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":2,"customer":"4 Seasons Nails","revenue":100,"rep":"Sohaib Hafeez","description":"Term Length Bonus","detail":"36 Month +","repPay":45,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":3,"customer":"Almaz Retail INC.","revenue":310,"rep":"Sohaib Hafeez","description":"Broker Fee 2","detail":"Above 40k TX","repPay":140,"saleDate":"4/7/2026","actDate":"4/8/2026","category":"ELE","status":"Accepted By Supplier"},{"id":4,"customer":"Almaz Retail INC.","revenue":250,"rep":"Sohaib Hafeez","description":"kWH Bonus","detail":"80-100k TX","repPay":120,"saleDate":"4/7/2026","actDate":"4/8/2026","category":"Bonus","status":"Bonus"},{"id":5,"customer":"Almaz Retail INC.","revenue":130,"rep":"Sohaib Hafeez","description":"Rep Volume Bonus","detail":"Tier 2","repPay":120,"saleDate":"4/7/2026","actDate":"4/8/2026","category":"Bonus","status":"Bonus"},{"id":6,"customer":"Almaz Retail INC.","revenue":150,"rep":"Sohaib Hafeez","description":"Term Length Bonus","detail":"36 Month +","repPay":70,"saleDate":"4/7/2026","actDate":"4/8/2026","category":"Bonus","status":"Bonus"},{"id":7,"customer":"Bare Wire LLC.","revenue":275,"rep":"Sohaib Hafeez","description":"Broker Fee 2","detail":"Below 40k TX","repPay":120,"saleDate":"4/8/2026","actDate":"4/9/2026","category":"ELE","status":"Accepted By Supplier"},{"id":8,"customer":"Bare Wire LLC.","revenue":130,"rep":"Sohaib Hafeez","description":"Rep Volume Bonus","detail":"Tier 2","repPay":120,"saleDate":"4/8/2026","actDate":"4/9/2026","category":"Bonus","status":"Bonus"},{"id":9,"customer":"Bare Wire LLC.","revenue":100,"rep":"Sohaib Hafeez","description":"Term Length Bonus","detail":"36 Month +","repPay":45,"saleDate":"4/8/2026","actDate":"4/9/2026","category":"Bonus","status":"Bonus"},{"id":10,"customer":"Desoto Grocery Food Mart","revenue":310,"rep":"Sohaib Hafeez","description":"Broker Fee 2","detail":"Above 40k TX","repPay":140,"saleDate":"4/7/2026","actDate":"4/8/2026","category":"ELE","status":"Accepted By Supplier"},{"id":11,"customer":"Desoto Grocery Food Mart","revenue":350,"rep":"Sohaib Hafeez","description":"kWH Bonus","detail":"100k+ TX","repPay":165,"saleDate":"4/7/2026","actDate":"4/8/2026","category":"Bonus","status":"Bonus"},{"id":12,"customer":"Desoto Grocery Food Mart","revenue":130,"rep":"Sohaib Hafeez","description":"Rep Volume Bonus","detail":"Tier 2","repPay":120,"saleDate":"4/7/2026","actDate":"4/8/2026","category":"Bonus","status":"Bonus"},{"id":13,"customer":"Desoto Grocery Food Mart","revenue":150,"rep":"Sohaib Hafeez","description":"Term Length Bonus","detail":"36 Month +","repPay":70,"saleDate":"4/7/2026","actDate":"4/8/2026","category":"Bonus","status":"Bonus"},{"id":14,"customer":"Head Turna Barbershop","revenue":275,"rep":"Sohaib Hafeez","description":"Broker Fee 2","detail":"Below 40k TX","repPay":120,"saleDate":"4/9/2026","actDate":"4/13/2026","category":"ELE","status":"Accepted By Supplier"},{"id":15,"customer":"Head Turna Barbershop","revenue":130,"rep":"Sohaib Hafeez","description":"Rep Volume Bonus","detail":"Tier 2","repPay":120,"saleDate":"4/9/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":16,"customer":"Head Turna Barbershop","revenue":100,"rep":"Sohaib Hafeez","description":"Term Length Bonus","detail":"36 Month +","repPay":45,"saleDate":"4/9/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":17,"customer":"Jix Corporation","revenue":310,"rep":"Sohaib Hafeez","description":"Broker Fee 2","detail":"Above 40k TX","repPay":140,"saleDate":"4/6/2026","actDate":"4/7/2026","category":"ELE","status":"Accepted By Supplier"},{"id":18,"customer":"Jix Corporation","revenue":350,"rep":"Sohaib Hafeez","description":"kWH Bonus","detail":"100k+ TX","repPay":165,"saleDate":"4/6/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":19,"customer":"Jix Corporation","revenue":130,"rep":"Sohaib Hafeez","description":"Rep Volume Bonus","detail":"Tier 2","repPay":120,"saleDate":"4/6/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":20,"customer":"Jix Corporation","revenue":150,"rep":"Sohaib Hafeez","description":"Term Length Bonus","detail":"36 Month +","repPay":70,"saleDate":"4/6/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":21,"customer":"LJ Barber Shop","revenue":275,"rep":"Sohaib Hafeez","description":"Broker Fee 2","detail":"Below 40k TX","repPay":120,"saleDate":"4/2/2026","actDate":"4/7/2026","category":"ELE","status":"Accepted By Supplier"},{"id":22,"customer":"LJ Barber Shop","revenue":130,"rep":"Sohaib Hafeez","description":"Rep Volume Bonus","detail":"Tier 2","repPay":120,"saleDate":"4/2/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":23,"customer":"LJ Barber Shop","revenue":100,"rep":"Sohaib Hafeez","description":"Term Length Bonus","detail":"36 Month +","repPay":45,"saleDate":"4/2/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":24,"customer":"Queen Isha Braids And Weaving","revenue":325,"rep":"Sohaib Hafeez","description":"Broker Fee 1","detail":"Below 40k TX","repPay":160,"saleDate":"4/2/2026","actDate":"4/7/2026","category":"ELE","status":"Accepted By Supplier"},{"id":25,"customer":"Queen Isha Braids And Weaving","revenue":130,"rep":"Sohaib Hafeez","description":"Rep Volume Bonus","detail":"Tier 2","repPay":120,"saleDate":"4/2/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":26,"customer":"Queen Isha Braids And Weaving","revenue":100,"rep":"Sohaib Hafeez","description":"Term Length Bonus","detail":"36 Month +","repPay":45,"saleDate":"4/2/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":27,"customer":"Shannon Bell Auto","revenue":275,"rep":"Sohaib Hafeez","description":"Broker Fee 2","detail":"Below 40k TX","repPay":120,"saleDate":"4/4/2026","actDate":"4/7/2026","category":"ELE","status":"Accepted By Supplier"},{"id":28,"customer":"Shannon Bell Auto","revenue":130,"rep":"Sohaib Hafeez","description":"Rep Volume Bonus","detail":"Tier 2","repPay":120,"saleDate":"4/4/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":29,"customer":"Shannon Bell Auto","revenue":100,"rep":"Sohaib Hafeez","description":"Term Length Bonus","detail":"36 Month +","repPay":45,"saleDate":"4/4/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":30,"customer":"The Jones Experience","revenue":325,"rep":"Sohaib Hafeez","description":"Broker Fee 1","detail":"Below 40k TX","repPay":160,"saleDate":"4/9/2026","actDate":"4/10/2026","category":"ELE","status":"Accepted By Supplier"},{"id":31,"customer":"The Jones Experience","revenue":130,"rep":"Sohaib Hafeez","description":"Rep Volume Bonus","detail":"Tier 2","repPay":120,"saleDate":"4/9/2026","actDate":"4/10/2026","category":"Bonus","status":"Bonus"},{"id":32,"customer":"The Jones Experience","revenue":100,"rep":"Sohaib Hafeez","description":"Term Length Bonus","detail":"36 Month +","repPay":45,"saleDate":"4/9/2026","actDate":"4/10/2026","category":"Bonus","status":"Bonus"}]},{"rep":"Cameron Miller","total":1015,"items":[{"id":0,"customer":"AF Apparels LLC.","revenue":275,"rep":"Cameron Miller","description":"Broker Fee 2","detail":"Below 40k TX","repPay":90,"saleDate":"3/30/2026","actDate":"4/9/2026","category":"ELE","status":"Accepted By Supplier"},{"id":1,"customer":"AF Apparels LLC.","revenue":130,"rep":"Cameron Miller","description":"Rep Volume Bonus","detail":"Tier 2","repPay":80,"saleDate":"3/30/2026","actDate":"4/9/2026","category":"Bonus","status":"Bonus"},{"id":2,"customer":"AF Apparels LLC.","revenue":100,"rep":"Cameron Miller","description":"Term Length Bonus","detail":"36 Month +","repPay":40,"saleDate":"3/30/2026","actDate":"4/9/2026","category":"Bonus","status":"Bonus"},{"id":3,"customer":"AF Apparels LLC.","revenue":275,"rep":"Cameron Miller","description":"Broker Fee 2","detail":"Below 40k TX","repPay":90,"saleDate":"3/30/2026","actDate":"4/9/2026","category":"ELE","status":"Accepted By Supplier"},{"id":4,"customer":"AF Apparels LLC.","revenue":130,"rep":"Cameron Miller","description":"Rep Volume Bonus","detail":"Tier 2","repPay":80,"saleDate":"3/30/2026","actDate":"4/9/2026","category":"Bonus","status":"Bonus"},{"id":5,"customer":"AF Apparels LLC.","revenue":100,"rep":"Cameron Miller","description":"Term Length Bonus","detail":"36 Month +","repPay":40,"saleDate":"3/30/2026","actDate":"4/9/2026","category":"Bonus","status":"Bonus"},{"id":6,"customer":"BP Auctions","revenue":275,"rep":"Cameron Miller","description":"Broker Fee 2","detail":"Below 40k TX","repPay":90,"saleDate":"4/7/2026","actDate":"4/8/2026","category":"ELE","status":"Accepted By Supplier"},{"id":7,"customer":"BP Auctions","revenue":100,"rep":"Cameron Miller","description":"Term Length Bonus","detail":"36 Month +","repPay":40,"saleDate":"4/7/2026","actDate":"4/8/2026","category":"Bonus","status":"Bonus"},{"id":8,"customer":"Specialty Contractors","revenue":310,"rep":"Cameron Miller","description":"Broker Fee 2","detail":"Above 40k TX","repPay":110,"saleDate":"4/2/2026","actDate":"4/6/2026","category":"ELE","status":"Accepted By Supplier"},{"id":9,"customer":"Specialty Contractors","revenue":180,"rep":"Cameron Miller","description":"kWH Bonus","detail":"60-80k TX","repPay":85,"saleDate":"4/2/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":10,"customer":"Specialty Contractors","revenue":130,"rep":"Cameron Miller","description":"Rep Volume Bonus","detail":"Tier 2","repPay":80,"saleDate":"4/2/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":11,"customer":"Specialty Contractors","revenue":150,"rep":"Cameron Miller","description":"Term Length Bonus","detail":"36 Month +","repPay":65,"saleDate":"4/2/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":12,"customer":"ZZ New Hire Bonus","revenue":150,"rep":"Cameron Miller","description":"New Hire Bonus","detail":"Week 3 Bills Pulled 5 x $25","repPay":125,"saleDate":"4/12/2026","actDate":"","category":"Bonus","status":"Bonus"}]},{"rep":"Celesté Lewis","total":1790,"items":[{"id":0,"customer":"Air Engineering And Testing","revenue":275,"rep":"Celesté Lewis","description":"Broker Fee 2","detail":"Below 40k TX","repPay":90,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"ELE","status":"Accepted By Supplier"},{"id":1,"customer":"Air Engineering And Testing","revenue":100,"rep":"Celesté Lewis","description":"Rep Volume Bonus","detail":"Tier 1","repPay":40,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":2,"customer":"ART Biotech LLC.","revenue":325,"rep":"Celesté Lewis","description":"Broker Fee 1","detail":"Below 40k TX","repPay":110,"saleDate":"4/9/2026","actDate":"4/13/2026","category":"ELE","status":"Accepted By Supplier"},{"id":3,"customer":"ART Biotech LLC.","revenue":100,"rep":"Celesté Lewis","description":"Rep Volume Bonus","detail":"Tier 1","repPay":40,"saleDate":"4/9/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":4,"customer":"ART Biotech LLC.","revenue":100,"rep":"Celesté Lewis","description":"Term Length Bonus","detail":"36 Month +","repPay":40,"saleDate":"4/9/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":5,"customer":"Law Office Of Wonyoung Kim","revenue":275,"rep":"Celesté Lewis","description":"Broker Fee 2","detail":"Below 40k TX","repPay":90,"saleDate":"4/9/2026","actDate":"4/10/2026","category":"ELE","status":"Accepted By Supplier"},{"id":6,"customer":"Law Office Of Wonyoung Kim","revenue":100,"rep":"Celesté Lewis","description":"Rep Volume Bonus","detail":"Tier 1","repPay":40,"saleDate":"4/9/2026","actDate":"4/10/2026","category":"Bonus","status":"Bonus"},{"id":7,"customer":"Law Office Of Wonyoung Kim","revenue":100,"rep":"Celesté Lewis","description":"Term Length Bonus","detail":"36 Month +","repPay":40,"saleDate":"4/9/2026","actDate":"4/10/2026","category":"Bonus","status":"Bonus"},{"id":8,"customer":"ZZ New Hire Bonus","revenue":2080,"rep":"Celesté Lewis","description":"New Hire Bonus","detail":"Week 1 Bills Pulled 26 x $50","repPay":1300,"saleDate":"4/12/2026","actDate":"","category":"Bonus","status":"Bonus"}]},{"rep":"Thomas Crenshaw","total":4065,"items":[{"id":0,"customer":"Ardys For Paws, LLC.","revenue":275,"rep":"Thomas Crenshaw","description":"Broker Fee 2","detail":"Below 40k TX","repPay":120,"saleDate":"4/8/2026","actDate":"4/9/2026","category":"ELE","status":"Accepted By Supplier"},{"id":1,"customer":"Ardys For Paws, LLC.","revenue":165,"rep":"Thomas Crenshaw","description":"Rep Volume Bonus","detail":"Tier 3","repPay":200,"saleDate":"4/8/2026","actDate":"4/9/2026","category":"Bonus","status":"Bonus"},{"id":2,"customer":"Ardys For Paws, LLC.","revenue":100,"rep":"Thomas Crenshaw","description":"Term Length Bonus","detail":"36 Month +","repPay":45,"saleDate":"4/8/2026","actDate":"4/9/2026","category":"Bonus","status":"Bonus"},{"id":3,"customer":"B H Repair Sewing Machines","revenue":375,"rep":"Thomas Crenshaw","description":"Broker Fee 1","detail":"Above 40k TX","repPay":175,"saleDate":"3/30/2026","actDate":"4/7/2026","category":"ELE","status":"Accepted By Supplier"},{"id":4,"customer":"B H Repair Sewing Machines","revenue":25,"rep":"Thomas Crenshaw","description":"kWH Bonus","detail":"40-45k TX","repPay":10,"saleDate":"3/30/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":5,"customer":"B H Repair Sewing Machines","revenue":165,"rep":"Thomas Crenshaw","description":"Rep Volume Bonus","detail":"Tier 3","repPay":200,"saleDate":"3/30/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":6,"customer":"B H Repair Sewing Machines","revenue":150,"rep":"Thomas Crenshaw","description":"Term Length Bonus","detail":"36 Month +","repPay":70,"saleDate":"3/30/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":7,"customer":"Bonrics Art And Frames Gallery","revenue":275,"rep":"Thomas Crenshaw","description":"Broker Fee 2","detail":"Below 40k TX","repPay":120,"saleDate":"4/7/2026","actDate":"4/10/2026","category":"ELE","status":"Accepted By Supplier"},{"id":8,"customer":"Bonrics Art And Frames Gallery","revenue":165,"rep":"Thomas Crenshaw","description":"Rep Volume Bonus","detail":"Tier 3","repPay":200,"saleDate":"4/7/2026","actDate":"4/10/2026","category":"Bonus","status":"Bonus"},{"id":9,"customer":"Bonrics Art And Frames Gallery","revenue":100,"rep":"Thomas Crenshaw","description":"Term Length Bonus","detail":"36 Month +","repPay":45,"saleDate":"4/7/2026","actDate":"4/10/2026","category":"Bonus","status":"Bonus"},{"id":10,"customer":"Megatel Property LLC.","revenue":310,"rep":"Thomas Crenshaw","description":"Broker Fee 2","detail":"Above 40k TX","repPay":140,"saleDate":"4/6/2026","actDate":"4/9/2026","category":"ELE","status":"Accepted By Supplier"},{"id":11,"customer":"Megatel Property LLC.","revenue":350,"rep":"Thomas Crenshaw","description":"kWH Bonus","detail":"100k+ TX","repPay":165,"saleDate":"4/6/2026","actDate":"4/9/2026","category":"Bonus","status":"Bonus"},{"id":12,"customer":"Megatel Property LLC.","revenue":165,"rep":"Thomas Crenshaw","description":"Rep Volume Bonus","detail":"Tier 3","repPay":200,"saleDate":"4/6/2026","actDate":"4/9/2026","category":"Bonus","status":"Bonus"},{"id":13,"customer":"Megatel Property LLC.","revenue":150,"rep":"Thomas Crenshaw","description":"Term Length Bonus","detail":"36 Month +","repPay":70,"saleDate":"4/6/2026","actDate":"4/9/2026","category":"Bonus","status":"Bonus"},{"id":14,"customer":"Megatel Property LLC.","revenue":310,"rep":"Thomas Crenshaw","description":"Broker Fee 2","detail":"Above 40k TX","repPay":140,"saleDate":"4/6/2026","actDate":"4/9/2026","category":"ELE","status":"Accepted By Supplier"},{"id":15,"customer":"Megatel Property LLC.","revenue":350,"rep":"Thomas Crenshaw","description":"kWH Bonus","detail":"100k+ TX","repPay":165,"saleDate":"4/6/2026","actDate":"4/9/2026","category":"Bonus","status":"Bonus"},{"id":16,"customer":"Megatel Property LLC.","revenue":165,"rep":"Thomas Crenshaw","description":"Rep Volume Bonus","detail":"Tier 3","repPay":200,"saleDate":"4/6/2026","actDate":"4/9/2026","category":"Bonus","status":"Bonus"},{"id":17,"customer":"Megatel Property LLC.","revenue":150,"rep":"Thomas Crenshaw","description":"Term Length Bonus","detail":"36 Month +","repPay":70,"saleDate":"4/6/2026","actDate":"4/9/2026","category":"Bonus","status":"Bonus"},{"id":18,"customer":"New Skillman Wok","revenue":310,"rep":"Thomas Crenshaw","description":"Broker Fee 2","detail":"Above 40k TX","repPay":140,"saleDate":"4/3/2026","actDate":"4/6/2026","category":"ELE","status":"Accepted By Supplier"},{"id":19,"customer":"New Skillman Wok","revenue":50,"rep":"Thomas Crenshaw","description":"kWH Bonus","detail":"45-50k TX","repPay":20,"saleDate":"4/3/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":20,"customer":"New Skillman Wok","revenue":165,"rep":"Thomas Crenshaw","description":"Rep Volume Bonus","detail":"Tier 3","repPay":200,"saleDate":"4/3/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":21,"customer":"New Skillman Wok","revenue":150,"rep":"Thomas Crenshaw","description":"Term Length Bonus","detail":"36 Month +","repPay":70,"saleDate":"4/3/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":22,"customer":"Sucie Logistics & Cleaning LLC.","revenue":325,"rep":"Thomas Crenshaw","description":"Broker Fee 1","detail":"Below 40k TX","repPay":160,"saleDate":"3/30/2026","actDate":"4/6/2026","category":"ELE","status":"Accepted By Supplier"},{"id":23,"customer":"Sucie Logistics & Cleaning LLC.","revenue":165,"rep":"Thomas Crenshaw","description":"Rep Volume Bonus","detail":"Tier 3","repPay":200,"saleDate":"3/30/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":24,"customer":"Sucie Logistics & Cleaning LLC.","revenue":100,"rep":"Thomas Crenshaw","description":"Term Length Bonus","detail":"36 Month +","repPay":45,"saleDate":"3/30/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":25,"customer":"Sweetfrog","revenue":310,"rep":"Thomas Crenshaw","description":"Broker Fee 2","detail":"Above 40k TX","repPay":140,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"ELE","status":"Accepted By Supplier"},{"id":26,"customer":"Sweetfrog","revenue":250,"rep":"Thomas Crenshaw","description":"kWH Bonus","detail":"80-100k TX","repPay":120,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":27,"customer":"Sweetfrog","revenue":165,"rep":"Thomas Crenshaw","description":"Rep Volume Bonus","detail":"Tier 3","repPay":200,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":28,"customer":"Sweetfrog","revenue":150,"rep":"Thomas Crenshaw","description":"Term Length Bonus","detail":"36 Month +","repPay":70,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":29,"customer":"Yes Dental Pllc","revenue":275,"rep":"Thomas Crenshaw","description":"Broker Fee 2","detail":"Below 40k TX","repPay":120,"saleDate":"4/9/2026","actDate":"4/10/2026","category":"ELE","status":"Accepted By Supplier"},{"id":30,"customer":"Yes Dental Pllc","revenue":165,"rep":"Thomas Crenshaw","description":"Rep Volume Bonus","detail":"Tier 3","repPay":200,"saleDate":"4/9/2026","actDate":"4/10/2026","category":"Bonus","status":"Bonus"},{"id":31,"customer":"Yes Dental Pllc","revenue":100,"rep":"Thomas Crenshaw","description":"Term Length Bonus","detail":"36 Month +","repPay":45,"saleDate":"4/9/2026","actDate":"4/10/2026","category":"Bonus","status":"Bonus"}]},{"rep":"Michael Gutierrez","total":1310,"items":[{"id":0,"customer":"Bladze Hair Salon","revenue":325,"rep":"Michael Gutierrez","description":"Broker Fee 1","detail":"Below 40k TX","repPay":110,"saleDate":"4/10/2026","actDate":"4/10/2026","category":"ELE","status":"Accepted By Supplier"},{"id":1,"customer":"Bladze Hair Salon","revenue":100,"rep":"Michael Gutierrez","description":"Rep Volume Bonus","detail":"Tier 1","repPay":40,"saleDate":"4/10/2026","actDate":"4/10/2026","category":"Bonus","status":"Bonus"},{"id":2,"customer":"Bladze Hair Salon","revenue":100,"rep":"Michael Gutierrez","description":"Term Length Bonus","detail":"36 Month +","repPay":40,"saleDate":"4/10/2026","actDate":"4/10/2026","category":"Bonus","status":"Bonus"},{"id":3,"customer":"Kemp'S Logistics","revenue":325,"rep":"Michael Gutierrez","description":"Broker Fee 1","detail":"Below 40k TX","repPay":110,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"ELE","status":"Accepted By Supplier"},{"id":4,"customer":"Kemp'S Logistics","revenue":100,"rep":"Michael Gutierrez","description":"Rep Volume Bonus","detail":"Tier 1","repPay":40,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":5,"customer":"Salon Meek","revenue":275,"rep":"Michael Gutierrez","description":"Broker Fee 2","detail":"Below 40k TX","repPay":90,"saleDate":"4/8/2026","actDate":"4/9/2026","category":"ELE","status":"Accepted By Supplier"},{"id":6,"customer":"Salon Meek","revenue":100,"rep":"Michael Gutierrez","description":"Rep Volume Bonus","detail":"Tier 1","repPay":40,"saleDate":"4/8/2026","actDate":"4/9/2026","category":"Bonus","status":"Bonus"},{"id":7,"customer":"Salon Meek","revenue":100,"rep":"Michael Gutierrez","description":"Term Length Bonus","detail":"36 Month +","repPay":40,"saleDate":"4/8/2026","actDate":"4/9/2026","category":"Bonus","status":"Bonus"},{"id":8,"customer":"ZZ New Hire Bonus","revenue":1280,"rep":"Michael Gutierrez","description":"New Hire Bonus","detail":"Week 1 Bills Pulled 16 x $50","repPay":800,"saleDate":"4/12/2026","actDate":"","category":"Bonus","status":"Bonus"}]},{"rep":"Andrew Beimler","total":3490,"items":[{"id":0,"customer":"C&y Bakery LLC.","revenue":375,"rep":"Andrew Beimler","description":"Broker Fee 1","detail":"Above 40k TX","repPay":185,"saleDate":"4/8/2026","actDate":"4/10/2026","category":"ELE","status":"Accepted By Supplier"},{"id":1,"customer":"C&y Bakery LLC.","revenue":80,"rep":"Andrew Beimler","description":"kWH Bonus","detail":"50-55k TX","repPay":35,"saleDate":"4/8/2026","actDate":"4/10/2026","category":"Bonus","status":"Bonus"},{"id":2,"customer":"C&y Bakery LLC.","revenue":130,"rep":"Andrew Beimler","description":"Rep Volume Bonus","detail":"Tier 2","repPay":140,"saleDate":"4/8/2026","actDate":"4/10/2026","category":"Bonus","status":"Bonus"},{"id":3,"customer":"C&y Bakery LLC.","revenue":150,"rep":"Andrew Beimler","description":"Term Length Bonus","detail":"36 Month +","repPay":75,"saleDate":"4/8/2026","actDate":"4/10/2026","category":"Bonus","status":"Bonus"},{"id":4,"customer":"Harris Kb LLC.","revenue":275,"rep":"Andrew Beimler","description":"Broker Fee 2","detail":"Below 40k TX","repPay":130,"saleDate":"4/2/2026","actDate":"4/6/2026","category":"ELE","status":"Accepted By Supplier"},{"id":5,"customer":"Harris Kb LLC.","revenue":210,"rep":"Andrew Beimler","description":"Rep Volume Bonus","detail":"Tier 4","repPay":230,"saleDate":"4/2/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":6,"customer":"Harris Kb LLC.","revenue":100,"rep":"Andrew Beimler","description":"Term Length Bonus","detail":"36 Month +","repPay":50,"saleDate":"4/2/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":7,"customer":"Hotstone And Korean Kitchen","revenue":310,"rep":"Andrew Beimler","description":"Broker Fee 2","detail":"Above 40k TX","repPay":150,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"ELE","status":"Accepted By Supplier"},{"id":8,"customer":"Hotstone And Korean Kitchen","revenue":350,"rep":"Andrew Beimler","description":"kWH Bonus","detail":"100k+ TX","repPay":165,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":9,"customer":"Hotstone And Korean Kitchen","revenue":130,"rep":"Andrew Beimler","description":"Rep Volume Bonus","detail":"Tier 2","repPay":140,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":10,"customer":"Hotstone And Korean Kitchen","revenue":150,"rep":"Andrew Beimler","description":"Term Length Bonus","detail":"36 Month +","repPay":75,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":11,"customer":"Jes Tax And Insurance Agency LLC.","revenue":325,"rep":"Andrew Beimler","description":"Broker Fee 1","detail":"Below 40k TX","repPay":170,"saleDate":"4/2/2026","actDate":"4/6/2026","category":"ELE","status":"Accepted By Supplier"},{"id":12,"customer":"Jes Tax And Insurance Agency LLC.","revenue":210,"rep":"Andrew Beimler","description":"Rep Volume Bonus","detail":"Tier 4","repPay":230,"saleDate":"4/2/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":13,"customer":"Jes Tax And Insurance Agency LLC.","revenue":100,"rep":"Andrew Beimler","description":"Term Length Bonus","detail":"36 Month +","repPay":50,"saleDate":"4/2/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":14,"customer":"Masa Design-Build LLC.","revenue":275,"rep":"Andrew Beimler","description":"Broker Fee 2","detail":"Below 40k TX","repPay":130,"saleDate":"4/6/2026","actDate":"4/8/2026","category":"ELE","status":"Accepted By Supplier"},{"id":15,"customer":"Masa Design-Build LLC.","revenue":130,"rep":"Andrew Beimler","description":"Rep Volume Bonus","detail":"Tier 2","repPay":140,"saleDate":"4/6/2026","actDate":"4/8/2026","category":"Bonus","status":"Bonus"},{"id":16,"customer":"Masa Design-Build LLC.","revenue":100,"rep":"Andrew Beimler","description":"Term Length Bonus","detail":"36 Month +","repPay":50,"saleDate":"4/6/2026","actDate":"4/8/2026","category":"Bonus","status":"Bonus"},{"id":17,"customer":"Mci Signs LLC.","revenue":275,"rep":"Andrew Beimler","description":"Broker Fee 2","detail":"Below 40k TX","repPay":130,"saleDate":"4/9/2026","actDate":"4/10/2026","category":"ELE","status":"Accepted By Supplier"},{"id":18,"customer":"Mci Signs LLC.","revenue":130,"rep":"Andrew Beimler","description":"Rep Volume Bonus","detail":"Tier 2","repPay":140,"saleDate":"4/9/2026","actDate":"4/10/2026","category":"Bonus","status":"Bonus"},{"id":19,"customer":"Mci Signs LLC.","revenue":50,"rep":"Andrew Beimler","description":"Term Length Bonus","detail":"24 Month","repPay":25,"saleDate":"4/9/2026","actDate":"4/10/2026","category":"Bonus","status":"Bonus"},{"id":20,"customer":"Mobilesquare INC.","revenue":275,"rep":"Andrew Beimler","description":"Broker Fee 2","detail":"Below 40k TX","repPay":130,"saleDate":"4/8/2026","actDate":"4/9/2026","category":"ELE","status":"Accepted By Supplier"},{"id":21,"customer":"Mobilesquare INC.","revenue":130,"rep":"Andrew Beimler","description":"Rep Volume Bonus","detail":"Tier 2","repPay":140,"saleDate":"4/8/2026","actDate":"4/9/2026","category":"Bonus","status":"Bonus"},{"id":22,"customer":"Mobilesquare INC.","revenue":100,"rep":"Andrew Beimler","description":"Term Length Bonus","detail":"36 Month +","repPay":50,"saleDate":"4/8/2026","actDate":"4/9/2026","category":"Bonus","status":"Bonus"},{"id":23,"customer":"ONC Trading LLC.","revenue":275,"rep":"Andrew Beimler","description":"Broker Fee 2","detail":"Below 40k TX","repPay":130,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"ELE","status":"Accepted By Supplier"},{"id":24,"customer":"ONC Trading LLC.","revenue":130,"rep":"Andrew Beimler","description":"Rep Volume Bonus","detail":"Tier 2","repPay":140,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":25,"customer":"ONC Trading LLC.","revenue":100,"rep":"Andrew Beimler","description":"Term Length Bonus","detail":"36 Month +","repPay":50,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":26,"customer":"The 9th Chakra","revenue":275,"rep":"Andrew Beimler","description":"Broker Fee 2","detail":"Below 40k TX","repPay":130,"saleDate":"4/3/2026","actDate":"4/6/2026","category":"ELE","status":"Accepted By Supplier"},{"id":27,"customer":"The 9th Chakra","revenue":210,"rep":"Andrew Beimler","description":"Rep Volume Bonus","detail":"Tier 4","repPay":230,"saleDate":"4/3/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":28,"customer":"The 9th Chakra","revenue":100,"rep":"Andrew Beimler","description":"Term Length Bonus","detail":"36 Month +","repPay":50,"saleDate":"4/3/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"}]},{"rep":"Robert Moser","total":2495,"items":[{"id":0,"customer":"Castanon Body Shop","revenue":275,"rep":"Robert Moser","description":"Broker Fee 2","detail":"Below 40k TX","repPay":120,"saleDate":"4/11/2026","actDate":"4/14/2026","category":"ELE","status":"Accepted By Supplier"},{"id":1,"customer":"Castanon Body Shop","revenue":100,"rep":"Robert Moser","description":"Rep Volume Bonus","detail":"Tier 1","repPay":50,"saleDate":"4/11/2026","actDate":"4/14/2026","category":"Bonus","status":"Bonus"},{"id":2,"customer":"Castanon Body Shop","revenue":100,"rep":"Robert Moser","description":"Term Length Bonus","detail":"36 Month +","repPay":45,"saleDate":"4/11/2026","actDate":"4/14/2026","category":"Bonus","status":"Bonus"},{"id":3,"customer":"Cruz Auto Repair","revenue":325,"rep":"Robert Moser","description":"Broker Fee 1","detail":"Below 40k TX","repPay":160,"saleDate":"4/3/2026","actDate":"4/7/2026","category":"ELE","status":"Accepted By Supplier"},{"id":4,"customer":"Cruz Auto Repair","revenue":130,"rep":"Robert Moser","description":"Rep Volume Bonus","detail":"Tier 2","repPay":120,"saleDate":"4/3/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":5,"customer":"Cruz Auto Repair","revenue":100,"rep":"Robert Moser","description":"Term Length Bonus","detail":"36 Month +","repPay":45,"saleDate":"4/3/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":6,"customer":"Hail No Pdr Services","revenue":325,"rep":"Robert Moser","description":"Broker Fee 1","detail":"Below 40k TX","repPay":160,"saleDate":"3/28/2026","actDate":"4/14/2026","category":"ELE","status":"Accepted By Supplier"},{"id":7,"customer":"Hail No Pdr Services","revenue":165,"rep":"Robert Moser","description":"Rep Volume Bonus","detail":"Tier 3","repPay":200,"saleDate":"3/28/2026","actDate":"4/14/2026","category":"Bonus","status":"Bonus"},{"id":8,"customer":"Hail No Pdr Services","revenue":100,"rep":"Robert Moser","description":"Term Length Bonus","detail":"36 Month +","repPay":45,"saleDate":"3/28/2026","actDate":"4/14/2026","category":"Bonus","status":"Bonus"},{"id":9,"customer":"Hail No Pdr Services","revenue":325,"rep":"Robert Moser","description":"Broker Fee 1","detail":"Below 40k TX","repPay":160,"saleDate":"3/28/2026","actDate":"4/14/2026","category":"ELE","status":"Accepted By Supplier"},{"id":10,"customer":"Hail No Pdr Services","revenue":165,"rep":"Robert Moser","description":"Rep Volume Bonus","detail":"Tier 3","repPay":200,"saleDate":"3/28/2026","actDate":"4/14/2026","category":"Bonus","status":"Bonus"},{"id":11,"customer":"Hail No Pdr Services","revenue":100,"rep":"Robert Moser","description":"Term Length Bonus","detail":"36 Month +","repPay":45,"saleDate":"3/28/2026","actDate":"4/14/2026","category":"Bonus","status":"Bonus"},{"id":12,"customer":"Hail No Pdr Services","revenue":325,"rep":"Robert Moser","description":"Broker Fee 1","detail":"Below 40k TX","repPay":160,"saleDate":"4/2/2026","actDate":"4/8/2026","category":"ELE","status":"Accepted By Supplier"},{"id":13,"customer":"Hail No Pdr Services","revenue":130,"rep":"Robert Moser","description":"Rep Volume Bonus","detail":"Tier 2","repPay":120,"saleDate":"4/2/2026","actDate":"4/8/2026","category":"Bonus","status":"Bonus"},{"id":14,"customer":"Hail No Pdr Services","revenue":100,"rep":"Robert Moser","description":"Term Length Bonus","detail":"36 Month +","repPay":45,"saleDate":"4/2/2026","actDate":"4/8/2026","category":"Bonus","status":"Bonus"},{"id":15,"customer":"Jose El Negro Auto Works","revenue":325,"rep":"Robert Moser","description":"Broker Fee 1","detail":"Below 40k TX","repPay":160,"saleDate":"4/9/2026","actDate":"4/10/2026","category":"ELE","status":"Accepted By Supplier"},{"id":16,"customer":"Jose El Negro Auto Works","revenue":100,"rep":"Robert Moser","description":"Rep Volume Bonus","detail":"Tier 1","repPay":50,"saleDate":"4/9/2026","actDate":"4/10/2026","category":"Bonus","status":"Bonus"},{"id":17,"customer":"Jose El Negro Auto Works","revenue":100,"rep":"Robert Moser","description":"Term Length Bonus","detail":"36 Month +","repPay":45,"saleDate":"4/9/2026","actDate":"4/10/2026","category":"Bonus","status":"Bonus"},{"id":18,"customer":"Julio Cruz Dba Cruz Tacos","revenue":310,"rep":"Robert Moser","description":"Broker Fee 2","detail":"Above 40k TX","repPay":140,"saleDate":"4/3/2026","actDate":"4/7/2026","category":"ELE","status":"Accepted By Supplier"},{"id":19,"customer":"Julio Cruz Dba Cruz Tacos","revenue":50,"rep":"Robert Moser","description":"kWH Bonus","detail":"45-50k TX","repPay":20,"saleDate":"4/3/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":20,"customer":"Julio Cruz Dba Cruz Tacos","revenue":130,"rep":"Robert Moser","description":"Rep Volume Bonus","detail":"Tier 2","repPay":120,"saleDate":"4/3/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":21,"customer":"Julio Cruz Dba Cruz Tacos","revenue":150,"rep":"Robert Moser","description":"Term Length Bonus","detail":"36 Month +","repPay":70,"saleDate":"4/3/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":22,"customer":"Rosewater Capital Ltd","revenue":275,"rep":"Robert Moser","description":"Broker Fee 2","detail":"Below 40k TX","repPay":120,"saleDate":"4/10/2026","actDate":"4/14/2026","category":"ELE","status":"Accepted By Supplier"},{"id":23,"customer":"Rosewater Capital Ltd","revenue":100,"rep":"Robert Moser","description":"Rep Volume Bonus","detail":"Tier 1","repPay":50,"saleDate":"4/10/2026","actDate":"4/14/2026","category":"Bonus","status":"Bonus"},{"id":24,"customer":"Rosewater Capital Ltd","revenue":100,"rep":"Robert Moser","description":"Term Length Bonus","detail":"36 Month +","repPay":45,"saleDate":"4/10/2026","actDate":"4/14/2026","category":"Bonus","status":"Bonus"}]},{"rep":"Maximilian Allen","total":5110,"items":[{"id":0,"customer":"City Tires","revenue":275,"rep":"Maximilian Allen","description":"Broker Fee 2","detail":"Below 40k TX","repPay":275,"saleDate":"4/6/2026","actDate":"4/6/2026","category":"ELE","status":"Accepted By Supplier"},{"id":1,"customer":"City Tires","revenue":165,"rep":"Maximilian Allen","description":"Rep Volume Bonus","detail":"Tier 3","repPay":165,"saleDate":"4/6/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":2,"customer":"City Tires","revenue":50,"rep":"Maximilian Allen","description":"Term Length Bonus","detail":"24 Month","repPay":50,"saleDate":"4/6/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":3,"customer":"Empire Mechanical Heating & Ac, INC.","revenue":275,"rep":"Maximilian Allen","description":"Broker Fee 2","detail":"Below 40k TX","repPay":275,"saleDate":"4/2/2026","actDate":"4/6/2026","category":"ELE","status":"Accepted By Supplier"},{"id":4,"customer":"Empire Mechanical Heating & Ac, INC.","revenue":210,"rep":"Maximilian Allen","description":"Rep Volume Bonus","detail":"Tier 4","repPay":210,"saleDate":"4/2/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":5,"customer":"Empire Mechanical Heating & Ac, INC.","revenue":100,"rep":"Maximilian Allen","description":"Term Length Bonus","detail":"36 Month +","repPay":100,"saleDate":"4/2/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":6,"customer":"Michele Davis Insurance Agency INC.","revenue":325,"rep":"Maximilian Allen","description":"Broker Fee 1","detail":"Below 40k TX","repPay":325,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"ELE","status":"Accepted By Supplier"},{"id":7,"customer":"Michele Davis Insurance Agency INC.","revenue":165,"rep":"Maximilian Allen","description":"Rep Volume Bonus","detail":"Tier 3","repPay":165,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":8,"customer":"Michele Davis Insurance Agency INC.","revenue":100,"rep":"Maximilian Allen","description":"Term Length Bonus","detail":"36 Month +","repPay":100,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":9,"customer":"Ods, INC.","revenue":275,"rep":"Maximilian Allen","description":"Broker Fee 2","detail":"Below 40k TX","repPay":275,"saleDate":"3/30/2026","actDate":"4/8/2026","category":"ELE","status":"Accepted By Supplier"},{"id":10,"customer":"Ods, INC.","revenue":210,"rep":"Maximilian Allen","description":"Rep Volume Bonus","detail":"Tier 4","repPay":210,"saleDate":"3/30/2026","actDate":"4/8/2026","category":"Bonus","status":"Bonus"},{"id":11,"customer":"Ods, INC.","revenue":100,"rep":"Maximilian Allen","description":"Term Length Bonus","detail":"36 Month +","repPay":100,"saleDate":"3/30/2026","actDate":"4/8/2026","category":"Bonus","status":"Bonus"},{"id":12,"customer":"Ods, INC.","revenue":275,"rep":"Maximilian Allen","description":"Broker Fee 2","detail":"Below 40k TX","repPay":275,"saleDate":"3/30/2026","actDate":"4/8/2026","category":"ELE","status":"Accepted By Supplier"},{"id":13,"customer":"Ods, INC.","revenue":210,"rep":"Maximilian Allen","description":"Rep Volume Bonus","detail":"Tier 4","repPay":210,"saleDate":"3/30/2026","actDate":"4/8/2026","category":"Bonus","status":"Bonus"},{"id":14,"customer":"Ods, INC.","revenue":50,"rep":"Maximilian Allen","description":"Term Length Bonus","detail":"24 Month","repPay":50,"saleDate":"3/30/2026","actDate":"4/8/2026","category":"Bonus","status":"Bonus"},{"id":15,"customer":"Pupuseria Y Taqueria Del Norte","revenue":310,"rep":"Maximilian Allen","description":"Broker Fee 2","detail":"Above 40k TX","repPay":310,"saleDate":"4/8/2026","actDate":"4/13/2026","category":"ELE","status":"Accepted By Supplier"},{"id":16,"customer":"Pupuseria Y Taqueria Del Norte","revenue":50,"rep":"Maximilian Allen","description":"kWH Bonus","detail":"45-50k TX","repPay":50,"saleDate":"4/8/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":17,"customer":"Pupuseria Y Taqueria Del Norte","revenue":165,"rep":"Maximilian Allen","description":"Rep Volume Bonus","detail":"Tier 3","repPay":165,"saleDate":"4/8/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":18,"customer":"Pupuseria Y Taqueria Del Norte","revenue":100,"rep":"Maximilian Allen","description":"Term Length Bonus","detail":"24 Month","repPay":100,"saleDate":"4/8/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":19,"customer":"RPB Hazel Smoke INC.","revenue":275,"rep":"Maximilian Allen","description":"Broker Fee 2","detail":"Below 40k TX","repPay":275,"saleDate":"4/6/2026","actDate":"4/7/2026","category":"ELE","status":"Accepted By Supplier"},{"id":20,"customer":"RPB Hazel Smoke INC.","revenue":165,"rep":"Maximilian Allen","description":"Rep Volume Bonus","detail":"Tier 3","repPay":165,"saleDate":"4/6/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":21,"customer":"RPB Hazel Smoke INC.","revenue":50,"rep":"Maximilian Allen","description":"Term Length Bonus","detail":"24 Month","repPay":50,"saleDate":"4/6/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":22,"customer":"Titan Collision Auto Painting INC.","revenue":310,"rep":"Maximilian Allen","description":"Broker Fee 2","detail":"Above 40k TX","repPay":310,"saleDate":"4/8/2026","actDate":"4/9/2026","category":"ELE","status":"Accepted By Supplier"},{"id":23,"customer":"Titan Collision Auto Painting INC.","revenue":50,"rep":"Maximilian Allen","description":"kWH Bonus","detail":"45-50k TX","repPay":50,"saleDate":"4/8/2026","actDate":"4/9/2026","category":"Bonus","status":"Bonus"},{"id":24,"customer":"Titan Collision Auto Painting INC.","revenue":165,"rep":"Maximilian Allen","description":"Rep Volume Bonus","detail":"Tier 3","repPay":165,"saleDate":"4/8/2026","actDate":"4/9/2026","category":"Bonus","status":"Bonus"},{"id":25,"customer":"Titan Collision Auto Painting INC.","revenue":100,"rep":"Maximilian Allen","description":"Term Length Bonus","detail":"24 Month","repPay":100,"saleDate":"4/8/2026","actDate":"4/9/2026","category":"Bonus","status":"Bonus"},{"id":26,"customer":"Tom Rapp Insurance Agency","revenue":275,"rep":"Maximilian Allen","description":"Broker Fee 2","detail":"Below 40k TX","repPay":275,"saleDate":"4/3/2026","actDate":"4/6/2026","category":"ELE","status":"Accepted By Supplier"},{"id":27,"customer":"Tom Rapp Insurance Agency","revenue":210,"rep":"Maximilian Allen","description":"Rep Volume Bonus","detail":"Tier 4","repPay":210,"saleDate":"4/3/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":28,"customer":"Tom Rapp Insurance Agency","revenue":100,"rep":"Maximilian Allen","description":"Term Length Bonus","detail":"36 Month +","repPay":100,"saleDate":"4/3/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"}]},{"rep":"Terrel Watson","total":1580,"items":[{"id":0,"customer":"Color New Mobile","revenue":275,"rep":"Terrel Watson","description":"Broker Fee 2","detail":"Below 40k TX","repPay":120,"saleDate":"4/3/2026","actDate":"4/6/2026","category":"ELE","status":"Accepted By Supplier"},{"id":1,"customer":"Color New Mobile","revenue":165,"rep":"Terrel Watson","description":"Rep Volume Bonus","detail":"Tier 3","repPay":200,"saleDate":"4/3/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":2,"customer":"Color New Mobile","revenue":100,"rep":"Terrel Watson","description":"Term Length Bonus","detail":"36 Month +","repPay":45,"saleDate":"4/3/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":3,"customer":"James Barber","revenue":275,"rep":"Terrel Watson","description":"Broker Fee 2","detail":"Below 40k TX","repPay":120,"saleDate":"4/9/2026","actDate":"4/10/2026","category":"ELE","status":"Accepted By Supplier"},{"id":4,"customer":"James Barber","revenue":100,"rep":"Terrel Watson","description":"Rep Volume Bonus","detail":"Tier 1","repPay":50,"saleDate":"4/9/2026","actDate":"4/10/2026","category":"Bonus","status":"Bonus"},{"id":5,"customer":"James Barber","revenue":100,"rep":"Terrel Watson","description":"Term Length Bonus","detail":"36 Month +","repPay":45,"saleDate":"4/9/2026","actDate":"4/10/2026","category":"Bonus","status":"Bonus"},{"id":6,"customer":"Mechanical Diesel Service","revenue":325,"rep":"Terrel Watson","description":"Broker Fee 1","detail":"Below 40k TX","repPay":160,"saleDate":"4/6/2026","actDate":"4/7/2026","category":"ELE","status":"Accepted By Supplier"},{"id":7,"customer":"Mechanical Diesel Service","revenue":100,"rep":"Terrel Watson","description":"Rep Volume Bonus","detail":"Tier 1","repPay":50,"saleDate":"4/6/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":8,"customer":"Mechanical Diesel Service","revenue":100,"rep":"Terrel Watson","description":"Term Length Bonus","detail":"36 Month +","repPay":45,"saleDate":"4/6/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":9,"customer":"RKR Technologies Ltd","revenue":310,"rep":"Terrel Watson","description":"Broker Fee 2","detail":"Above 40k TX","repPay":140,"saleDate":"4/6/2026","actDate":"4/8/2026","category":"ELE","status":"Accepted By Supplier"},{"id":10,"customer":"RKR Technologies Ltd","revenue":180,"rep":"Terrel Watson","description":"kWH Bonus","detail":"60-80k TX","repPay":85,"saleDate":"4/6/2026","actDate":"4/8/2026","category":"Bonus","status":"Bonus"},{"id":11,"customer":"RKR Technologies Ltd","revenue":100,"rep":"Terrel Watson","description":"Rep Volume Bonus","detail":"Tier 1","repPay":50,"saleDate":"4/6/2026","actDate":"4/8/2026","category":"Bonus","status":"Bonus"},{"id":12,"customer":"RKR Technologies Ltd","revenue":150,"rep":"Terrel Watson","description":"Term Length Bonus","detail":"36 Month +","repPay":70,"saleDate":"4/6/2026","actDate":"4/8/2026","category":"Bonus","status":"Bonus"},{"id":13,"customer":"ZZ New Hire Bonus","revenue":640,"rep":"Terrel Watson","description":"New Hire Bonus","detail":"Week 2 Bills Pulled 8 x $50","repPay":400,"saleDate":"4/12/2026","actDate":"","category":"Bonus","status":"Bonus"}]},{"rep":"Alyssa Adkins","total":515,"items":[{"id":0,"customer":"Empire Auto Detail","revenue":325,"rep":"Alyssa Adkins","description":"Broker Fee 1","detail":"Below 40k TX","repPay":110,"saleDate":"4/3/2026","actDate":"4/7/2026","category":"ELE","status":"Accepted By Supplier"},{"id":1,"customer":"Empire Auto Detail","revenue":100,"rep":"Alyssa Adkins","description":"Rep Volume Bonus","detail":"Tier 1","repPay":40,"saleDate":"4/3/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":2,"customer":"Empire Auto Detail","revenue":100,"rep":"Alyssa Adkins","description":"Term Length Bonus","detail":"36 Month +","repPay":40,"saleDate":"4/3/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":3,"customer":"ZZ New Hire Bonus","revenue":390,"rep":"Alyssa Adkins","description":"New Hire Bonus","detail":"Week 3 Bills Pulled 13 x $25","repPay":325,"saleDate":"4/12/2026","actDate":"","category":"Bonus","status":"Bonus"}]},{"rep":"Yaden Diaz","total":2065,"items":[{"id":0,"customer":"Green Gate Condiminum Association","revenue":275,"rep":"Yaden Diaz","description":"Broker Fee 2","detail":"Below 40k TX","repPay":90,"saleDate":"4/7/2026","actDate":"4/8/2026","category":"ELE","status":"Accepted By Supplier"},{"id":1,"customer":"Green Gate Condiminum Association","revenue":130,"rep":"Yaden Diaz","description":"Rep Volume Bonus","detail":"Tier 2","repPay":80,"saleDate":"4/7/2026","actDate":"4/8/2026","category":"Bonus","status":"Bonus"},{"id":2,"customer":"Green Gate Condiminum Association","revenue":100,"rep":"Yaden Diaz","description":"Term Length Bonus","detail":"36 Month +","repPay":40,"saleDate":"4/7/2026","actDate":"4/8/2026","category":"Bonus","status":"Bonus"},{"id":3,"customer":"KG Automotive And Repair Service","revenue":325,"rep":"Yaden Diaz","description":"Broker Fee 1","detail":"Below 40k TX","repPay":110,"saleDate":"4/2/2026","actDate":"4/7/2026","category":"ELE","status":"Accepted By Supplier"},{"id":4,"customer":"KG Automotive And Repair Service","revenue":100,"rep":"Yaden Diaz","description":"Rep Volume Bonus","detail":"Tier 1","repPay":40,"saleDate":"4/2/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":5,"customer":"KG Automotive And Repair Service","revenue":100,"rep":"Yaden Diaz","description":"Term Length Bonus","detail":"36 Month +","repPay":40,"saleDate":"4/2/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":6,"customer":"Lujan Cabinets","revenue":325,"rep":"Yaden Diaz","description":"Broker Fee 1","detail":"Below 40k TX","repPay":110,"saleDate":"4/9/2026","actDate":"4/13/2026","category":"ELE","status":"Accepted By Supplier"},{"id":7,"customer":"Lujan Cabinets","revenue":130,"rep":"Yaden Diaz","description":"Rep Volume Bonus","detail":"Tier 2","repPay":80,"saleDate":"4/9/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":8,"customer":"Lujan Cabinets","revenue":100,"rep":"Yaden Diaz","description":"Term Length Bonus","detail":"36 Month +","repPay":40,"saleDate":"4/9/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":9,"customer":"Michale F. Slaton Real State INC.","revenue":275,"rep":"Yaden Diaz","description":"Broker Fee 2","detail":"Below 40k TX","repPay":90,"saleDate":"4/7/2026","actDate":"4/8/2026","category":"ELE","status":"Accepted By Supplier"},{"id":10,"customer":"Michale F. Slaton Real State INC.","revenue":130,"rep":"Yaden Diaz","description":"Rep Volume Bonus","detail":"Tier 2","repPay":80,"saleDate":"4/7/2026","actDate":"4/8/2026","category":"Bonus","status":"Bonus"},{"id":11,"customer":"Michale F. Slaton Real State INC.","revenue":100,"rep":"Yaden Diaz","description":"Term Length Bonus","detail":"36 Month +","repPay":40,"saleDate":"4/7/2026","actDate":"4/8/2026","category":"Bonus","status":"Bonus"},{"id":12,"customer":"Prestige Collision Repair","revenue":275,"rep":"Yaden Diaz","description":"Broker Fee 2","detail":"Below 40k TX","repPay":90,"saleDate":"4/1/2026","actDate":"4/6/2026","category":"ELE","status":"Accepted By Supplier"},{"id":13,"customer":"Prestige Collision Repair","revenue":100,"rep":"Yaden Diaz","description":"Rep Volume Bonus","detail":"Tier 1","repPay":40,"saleDate":"4/1/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":14,"customer":"Prestige Collision Repair","revenue":50,"rep":"Yaden Diaz","description":"Term Length Bonus","detail":"24 Month","repPay":15,"saleDate":"4/1/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":15,"customer":"Zip3 LLC.","revenue":375,"rep":"Yaden Diaz","description":"Broker Fee 1","detail":"Above 40k TX","repPay":120,"saleDate":"4/10/2026","actDate":"4/14/2026","category":"ELE","status":"Accepted By Supplier"},{"id":16,"customer":"Zip3 LLC.","revenue":350,"rep":"Yaden Diaz","description":"kWH Bonus","detail":"100k+ TX","repPay":165,"saleDate":"4/10/2026","actDate":"4/14/2026","category":"Bonus","status":"Bonus"},{"id":17,"customer":"Zip3 LLC.","revenue":130,"rep":"Yaden Diaz","description":"Rep Volume Bonus","detail":"Tier 2","repPay":80,"saleDate":"4/10/2026","actDate":"4/14/2026","category":"Bonus","status":"Bonus"},{"id":18,"customer":"Zip3 LLC.","revenue":150,"rep":"Yaden Diaz","description":"Term Length Bonus","detail":"36 Month +","repPay":65,"saleDate":"4/10/2026","actDate":"4/14/2026","category":"Bonus","status":"Bonus"},{"id":19,"customer":"ZZ New Hire Bonus","revenue":1040,"rep":"Yaden Diaz","description":"New Hire Bonus","detail":"Week 2 Bills Pulled 13 x $50","repPay":650,"saleDate":"4/12/2026","actDate":"","category":"Bonus","status":"Bonus"}]},{"rep":"Aimee Garibay-Gutierrez","total":1360,"items":[{"id":0,"customer":"Junebugs Children Boutique LLC.","revenue":275,"rep":"Aimee Garibay-Gutierrez","description":"Broker Fee 2","detail":"Below 40k TX","repPay":90,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"ELE","status":"Accepted By Supplier"},{"id":1,"customer":"Junebugs Children Boutique LLC.","revenue":100,"rep":"Aimee Garibay-Gutierrez","description":"Rep Volume Bonus","detail":"Tier 1","repPay":40,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":2,"customer":"Junebugs Children Boutique LLC.","revenue":100,"rep":"Aimee Garibay-Gutierrez","description":"Term Length Bonus","detail":"36 Month +","repPay":40,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":3,"customer":"Shrestha International LLC.","revenue":275,"rep":"Aimee Garibay-Gutierrez","description":"Broker Fee 2","detail":"Below 40k TX","repPay":90,"saleDate":"4/8/2026","actDate":"4/9/2026","category":"ELE","status":"Accepted By Supplier"},{"id":4,"customer":"Shrestha International LLC.","revenue":100,"rep":"Aimee Garibay-Gutierrez","description":"Rep Volume Bonus","detail":"Tier 1","repPay":40,"saleDate":"4/8/2026","actDate":"4/9/2026","category":"Bonus","status":"Bonus"},{"id":5,"customer":"Shrestha International LLC.","revenue":100,"rep":"Aimee Garibay-Gutierrez","description":"Term Length Bonus","detail":"36 Month +","repPay":40,"saleDate":"4/8/2026","actDate":"4/9/2026","category":"Bonus","status":"Bonus"},{"id":6,"customer":"Sims Chiropractor","revenue":275,"rep":"Aimee Garibay-Gutierrez","description":"Broker Fee 2","detail":"Below 40k TX","repPay":90,"saleDate":"4/8/2026","actDate":"4/9/2026","category":"ELE","status":"Accepted By Supplier"},{"id":7,"customer":"Sims Chiropractor","revenue":100,"rep":"Aimee Garibay-Gutierrez","description":"Rep Volume Bonus","detail":"Tier 1","repPay":40,"saleDate":"4/8/2026","actDate":"4/9/2026","category":"Bonus","status":"Bonus"},{"id":8,"customer":"Sims Chiropractor","revenue":100,"rep":"Aimee Garibay-Gutierrez","description":"Term Length Bonus","detail":"36 Month +","repPay":40,"saleDate":"4/8/2026","actDate":"4/9/2026","category":"Bonus","status":"Bonus"},{"id":9,"customer":"ZZ New Hire Bonus","revenue":1360,"rep":"Aimee Garibay-Gutierrez","description":"New Hire Bonus","detail":"Week 2 Bills Pulled 17 x $50","repPay":850,"saleDate":"4/12/2026","actDate":"","category":"Bonus","status":"Bonus"}]},{"rep":"Isabella White","total":1110,"items":[{"id":0,"customer":"Manada Shipping Xpress INC.","revenue":275,"rep":"Isabella White","description":"Broker Fee 2","detail":"Below 40k TX","repPay":90,"saleDate":"4/2/2026","actDate":"4/6/2026","category":"ELE","status":"Accepted By Supplier"},{"id":1,"customer":"Manada Shipping Xpress INC.","revenue":130,"rep":"Isabella White","description":"Rep Volume Bonus","detail":"Tier 2","repPay":80,"saleDate":"4/2/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":2,"customer":"Manada Shipping Xpress INC.","revenue":100,"rep":"Isabella White","description":"Term Length Bonus","detail":"36 Month +","repPay":40,"saleDate":"4/2/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":3,"customer":"Miller Ad Agency INC.","revenue":310,"rep":"Isabella White","description":"Broker Fee 2","detail":"Above 40k TX","repPay":110,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"ELE","status":"Accepted By Supplier"},{"id":4,"customer":"Miller Ad Agency INC.","revenue":25,"rep":"Isabella White","description":"kWH Bonus","detail":"40-45k TX","repPay":10,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":5,"customer":"Miller Ad Agency INC.","revenue":150,"rep":"Isabella White","description":"Term Length Bonus","detail":"36 Month +","repPay":65,"saleDate":"4/10/2026","actDate":"4/13/2026","category":"Bonus","status":"Bonus"},{"id":6,"customer":"Mustang Motor Sports","revenue":275,"rep":"Isabella White","description":"Broker Fee 2","detail":"Below 40k TX","repPay":90,"saleDate":"4/3/2026","actDate":"4/7/2026","category":"ELE","status":"Accepted By Supplier"},{"id":7,"customer":"Mustang Motor Sports","revenue":130,"rep":"Isabella White","description":"Rep Volume Bonus","detail":"Tier 2","repPay":80,"saleDate":"4/3/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":8,"customer":"Mustang Motor Sports","revenue":100,"rep":"Isabella White","description":"Term Length Bonus","detail":"36 Month +","repPay":40,"saleDate":"4/3/2026","actDate":"4/7/2026","category":"Bonus","status":"Bonus"},{"id":9,"customer":"Widell Renovations LLC.","revenue":325,"rep":"Isabella White","description":"Broker Fee 1","detail":"Below 40k TX","repPay":110,"saleDate":"4/3/2026","actDate":"4/6/2026","category":"ELE","status":"Accepted By Supplier"},{"id":10,"customer":"Widell Renovations LLC.","revenue":130,"rep":"Isabella White","description":"Rep Volume Bonus","detail":"Tier 2","repPay":80,"saleDate":"4/3/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":11,"customer":"Widell Renovations LLC.","revenue":100,"rep":"Isabella White","description":"Term Length Bonus","detail":"36 Month +","repPay":40,"saleDate":"4/3/2026","actDate":"4/6/2026","category":"Bonus","status":"Bonus"},{"id":12,"customer":"ZZ New Hire Bonus","revenue":330,"rep":"Isabella White","description":"New Hire Bonus","detail":"Week 3 Bills Pulled 11 x $25","repPay":275,"saleDate":"4/12/2026","actDate":"","category":"Bonus","status":"Bonus"}]},{"rep":"Jaime Costello","total":700,"items":[{"id":0,"customer":"ZZ New Hire Bonus","revenue":1120,"rep":"Jaime Costello","description":"New Hire Bonus","detail":"Week 1 Bills Pulled 14 x $50","repPay":700,"saleDate":"4/12/2026","actDate":"","category":"Bonus","status":"Bonus"}]},{"rep":"Meredith Mallory Iv","total":900,"items":[{"id":0,"customer":"ZZ New Hire Bonus","revenue":1440,"rep":"Meredith Mallory Iv","description":"New Hire Bonus","detail":"Week 1 Bills Pulled 18 x $50","repPay":900,"saleDate":"4/12/2026","actDate":"","category":"Bonus","status":"Bonus"}]},{"rep":"Tyler Gosselin","total":50,"items":[{"id":0,"customer":"ZZ New Hire Bonus","revenue":80,"rep":"Tyler Gosselin","description":"New Hire Bonus","detail":"Week 2 Bills Pulled 1 x $50","repPay":50,"saleDate":"4/12/2026","actDate":"","category":"Bonus","status":"Bonus"}]}];
+
+// ── state ──────────────────────────────────────────────────
+// Deep-copy so we can track mutations
+let state = JSON.parse(JSON.stringify(RAW_REPS));
+let deletedIds = {}; // { repName: Set of item ids }
+let addedItems = {}; // { repName: [items] }
+let currentRep = null;
+let showingAddRow = false;
+
+function fmtMoney(n) {
+  const v = Math.round(Number(n) || 0);
+  return (v < 0 ? '-$' : '$') + Math.abs(v).toLocaleString();
+}
+
+function getRepState(repName) {
+  return state.find(r => r.rep === repName);
+}
+
+function repTotal(repName) {
+  const rs = getRepState(repName);
+  if (!rs) return 0;
+  const deleted = deletedIds[repName] || new Set();
+  const added = addedItems[repName] || [];
+  const base = rs.items
+    .filter(it => !deleted.has(it.id))
+    .reduce((s, it) => s + (Number(it.repPay) || 0), 0);
+  const addedTotal = added.reduce((s, it) => s + (Number(it.repPay) || 0), 0);
+  return base + addedTotal;
+}
+
+function originalRepTotal(repName) {
+  const raw = RAW_REPS.find(r => r.rep === repName);
+  return raw ? raw.total : 0;
+}
+
+function isRepModified(repName) {
+  const rs = getRepState(repName);
+  const raw = RAW_REPS.find(r => r.rep === repName);
+  if (!rs || !raw) return false;
+  if ((deletedIds[repName] || new Set()).size > 0) return true;
+  if ((addedItems[repName] || []).length > 0) return true;
+  for (let i = 0; i < rs.items.length; i++) {
+    const cur = rs.items[i], orig = raw.items[i];
+    if (!orig) return true;
+    if (cur.rep !== orig.rep || cur.detail !== orig.detail || Number(cur.repPay) !== Number(orig.repPay)) return true;
+  }
+  return false;
+}
+
+function countTotalChanges() {
+  return state.filter(r => isRepModified(r.rep)).length;
+}
+
+// ── render ─────────────────────────────────────────────────
+function render() {
+  if (currentRep) renderDetail(currentRep);
+  else renderList();
+}
+
+function renderList() {
+  const changes = countTotalChanges();
+  const grandTotal = state.reduce((s, r) => s + repTotal(r.rep), 0);
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="header">
+      <h1>Commission <em>Review</em></h1>
+      <div class="meta">${OFFICE} &nbsp;·&nbsp; Pay Period: ${PERIOD.from} – ${PERIOD.to}</div>
+      <div class="summary-strip">
+        <div class="s-item">Total Payable <span class="s-val">${fmtMoney(grandTotal)}</span></div>
+        <div class="s-item">Reps <span class="s-val">${state.length}</span></div>
+        <div class="s-item">Changes <span class="s-val" id="chg-count">${changes}</span>${changes > 0 ? '<span style="color:#d4a574;font-size:10px;margin-left:4px;">PENDING</span>' : ''}</div>
+      </div>
+    </div>
+    <div class="section-label">Representatives</div>
+    ${state.map(r => {
+      const cur = repTotal(r.rep);
+      const orig = originalRepTotal(r.rep);
+      const mod = isRepModified(r.rep);
+      const changed = cur !== orig;
+      return `<div class="rep-card ${mod ? 'modified' : ''}" onclick="openRep('${escH(r.rep)}')">
+        <div>
+          <div class="rep-name">${escH(r.rep)}</div>
+          <div class="rep-meta">${r.items.length} line item${r.items.length !== 1 ? 's' : ''}${mod ? ' · <span style="color:var(--accent)">edited</span>' : ''}</div>
+        </div>
+        <div class="rep-total">
+          <div class="amount ${changed ? 'changed' : ''}">${fmtMoney(cur)}</div>
+          ${changed ? `<div class="original">${fmtMoney(orig)}</div>` : ''}
+        </div>
+        <div class="chevron">›</div>
+      </div>`;
+    }).join('')}
+    <div class="submit-bar">
+      <div class="change-count">${changes > 0 ? `<strong>${changes} rep${changes !== 1 ? 's' : ''}</strong> edited` : 'No changes yet'}</div>
+      <button class="submit-btn" onclick="submitReview()">Submit to Admin →</button>
+    </div>
+  `;
+}
+
+function openRep(repName) {
+  currentRep = repName;
+  showingAddRow = false;
+  render();
+}
+
+function goBack() {
+  currentRep = null;
+  showingAddRow = false;
+  render();
+}
+
+function renderDetail(repName) {
+  const rs = getRepState(repName);
+  if (!rs) { goBack(); return; }
+  const deleted = deletedIds[repName] || new Set();
+  const added = addedItems[repName] || [];
+  const cur = repTotal(repName);
+  const orig = originalRepTotal(repName);
+
+  let itemsHTML = rs.items.map(it => {
+    const isDel = deleted.has(it.id);
+    const isTier = /tier/i.test(it.description) || /tier/i.test(it.detail) || it.category === 'Rep Volume Bonus';
+    return `
+    <div class="line-item ${isDel ? 'deleted' : ''}" id="li-${it.id}">
+      <div class="li-top">
+        <span class="customer">${escH(it.customer)}</span>
+        <span class="revenue-badge">Rev: ${fmtMoney(it.revenue)}</span>
+      </div>
+      <div class="li-fields three">
+        <div class="field-group">
+          <label>Rep</label>
+          <select ${isDel ? 'disabled' : ''} onchange="updateItem('${escH(repName)}',${it.id},'rep',this.value)">
+            ${ROSTER.map(n => `<option value="${escH(n)}" ${n === it.rep ? 'selected' : ''}>${escH(n)}</option>`).join('')}
+            ${!ROSTER.includes(it.rep) ? `<option value="${escH(it.rep)}" selected>${escH(it.rep)}</option>` : ''}
+            <option value="__custom__">Other (type below)…</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Tier / Description</label>
+          <input type="text" ${isDel ? 'disabled' : ''} value="${escH(isTier ? (it.detail || it.description) : it.description)}" oninput="updateItem('${escH(repName)}',${it.id},'detail',this.value)" placeholder="e.g. Tier 1">
+        </div>
+        <div class="field-group">
+          <label>Pay ($)</label>
+          <input type="number" class="pay-field" ${isDel ? 'disabled' : ''} value="${it.repPay}" min="0" step="1" oninput="updateItem('${escH(repName)}',${it.id},'repPay',this.value)">
+        </div>
+      </div>
+      <div class="li-actions">
+        ${isDel
+          ? `<button class="restore-btn" onclick="restoreItem('${escH(repName)}',${it.id})">Restore</button>`
+          : `<button class="del-btn" onclick="deleteItem('${escH(repName)}',${it.id})">Remove</button>`}
+      </div>
+    </div>`;
+  }).join('');
+
+  const addedHTML = added.map((it, ai) => `
+    <div class="line-item" style="border-left:3px solid var(--green);">
+      <div class="li-top">
+        <span class="customer" style="color:var(--green)">+ New Line Item</span>
+        <span class="revenue-badge">Rev: ${fmtMoney(it.revenue)}</span>
+      </div>
+      <div class="li-fields three">
+        <div class="field-group">
+          <label>Customer</label>
+          <input type="text" value="${escH(it.customer)}" oninput="updateAdded('${escH(repName)}',${ai},'customer',this.value)" placeholder="Customer name">
+        </div>
+        <div class="field-group">
+          <label>Tier / Description</label>
+          <input type="text" value="${escH(it.detail)}" oninput="updateAdded('${escH(repName)}',${ai},'detail',this.value)" placeholder="e.g. Tier 1">
+        </div>
+        <div class="field-group">
+          <label>Pay ($)</label>
+          <input type="number" class="pay-field" value="${it.repPay}" min="0" step="1" oninput="updateAdded('${escH(repName)}',${ai},'repPay',this.value)">
+        </div>
+      </div>
+      <div class="li-actions">
+        <button class="del-btn" onclick="removeAdded('${escH(repName)}',${ai})">Remove</button>
+      </div>
+    </div>`).join('');
+
+  const addRowHTML = showingAddRow ? `
+    <div class="add-item-row">
+      <div class="add-fields">
+        <div class="field-group"><label>Customer</label><input type="text" id="new-customer" placeholder="Customer name"></div>
+        <div class="field-group"><label>Description</label><input type="text" id="new-desc" placeholder="e.g. Tier 1 Bonus"></div>
+        <div class="field-group"><label>Pay ($)</label><input type="number" id="new-pay" value="0" min="0"></div>
+      </div>
+      <div class="add-item-actions">
+        <button class="btn small" onclick="showingAddRow=false;render()">Cancel</button>
+        <button class="btn small primary" onclick="confirmAddItem('${escH(repName)}')">Add</button>
+      </div>
+    </div>` : '';
+
+  document.getElementById('app').innerHTML = `
+    <div class="detail-header">
+      <div class="back" onclick="goBack()">← All Reps</div>
+      <h2>${escH(repName)}</h2>
+      <div class="dtotal">Payable: <strong>${fmtMoney(cur)}</strong>${cur !== orig ? ` <span style="opacity:.5;text-decoration:line-through;font-size:12px;">${fmtMoney(orig)}</span>` : ''}</div>
+    </div>
+    ${itemsHTML}
+    ${addedHTML}
+    ${addRowHTML}
+    <button class="add-fab" title="Add line item" onclick="showingAddRow=!showingAddRow;render()">+</button>
+    <div class="submit-bar">
+      <div class="change-count" style="font-size:11px;color:rgba(255,255,255,0.45);">${escH(repName)}</div>
+      <button class="submit-btn" onclick="submitReview()">Submit to Admin →</button>
+    </div>
+  `;
+
+  // Wire up custom rep dropdowns
+  document.querySelectorAll('select').forEach(sel => {
+    sel.addEventListener('change', function() {
+      if (this.value === '__custom__') {
+        const custom = prompt('Enter rep name:');
+        if (custom && custom.trim()) {
+          const itemId = Number(this.closest('.line-item').id.split('-')[1]);
+          updateItem(repName, itemId, 'rep', custom.trim());
+          render();
+        } else {
+          this.value = repName; // revert
+        }
+      }
+    });
+  });
+}
+
+// ── mutations ──────────────────────────────────────────────
+function updateItem(repName, itemId, field, value) {
+  const rs = getRepState(repName);
+  if (!rs) return;
+  const it = rs.items.find(i => i.id === itemId);
+  if (!it) return;
+  it[field] = field === 'repPay' ? (Number(value) || 0) : value;
+}
+
+function deleteItem(repName, itemId) {
+  if (!deletedIds[repName]) deletedIds[repName] = new Set();
+  deletedIds[repName].add(itemId);
+  render();
+}
+
+function restoreItem(repName, itemId) {
+  if (deletedIds[repName]) deletedIds[repName].delete(itemId);
+  render();
+}
+
+function updateAdded(repName, addedIdx, field, value) {
+  if (!addedItems[repName] || !addedItems[repName][addedIdx]) return;
+  addedItems[repName][addedIdx][field] = field === 'repPay' ? (Number(value) || 0) : value;
+}
+
+function removeAdded(repName, addedIdx) {
+  if (addedItems[repName]) addedItems[repName].splice(addedIdx, 1);
+  render();
+}
+
+function confirmAddItem(repName) {
+  const customer = (document.getElementById('new-customer').value || '').trim();
+  const detail   = (document.getElementById('new-desc').value || '').trim();
+  const repPay   = Number(document.getElementById('new-pay').value) || 0;
+  if (!customer) { alert('Please enter a customer name.'); return; }
+  if (!addedItems[repName]) addedItems[repName] = [];
+  addedItems[repName].push({ customer, detail, description: detail, repPay, revenue: 0, rep: repName, category: 'Adjustment', status: 'Manual', saleDate: '', actDate: '' });
+  showingAddRow = false;
+  render();
+}
+
+// ── submit & encode ────────────────────────────────────────
+function submitReview() {
+  const changes = buildChangeset();
+  if (!changes.modified.length && !changes.added.length && !changes.deleted.length) {
+    if (!confirm('No changes have been made. Submit anyway?')) return;
+  }
+  const payload = {
+    v: 1,
+    period: PERIOD,
+    office: OFFICE,
+    ts: Date.now(),
+    changes
+  };
+  const json   = JSON.stringify(payload);
+  const b64    = btoa(unescape(encodeURIComponent(json)));
+  // Simple checksum
+  let chk = 0;
+  for (let i = 0; i < b64.length; i++) chk = (chk * 31 + b64.charCodeAt(i)) & 0xFFFFFFFF;
+  const code = 'CB1-' + b64 + '-' + Math.abs(chk).toString(36).toUpperCase();
+  showCodeModal(code, changes);
+}
+
+function buildChangeset() {
+  const modified = [], added = [], deleted = [];
+  for (const repData of state) {
+    const repName = repData.rep;
+    const rawRep  = RAW_REPS.find(r => r.rep === repName);
+    if (!rawRep) continue;
+    const delSet  = deletedIds[repName] || new Set();
+    const addList = addedItems[repName] || [];
+
+    // Modified & deleted existing items
+    for (let i = 0; i < repData.items.length; i++) {
+      const cur = repData.items[i];
+      const orig = rawRep.items[i];
+      if (!orig) continue;
+      if (delSet.has(cur.id)) {
+        deleted.push({ rep: repName, id: cur.id, customer: cur.customer });
+      } else if (cur.rep !== orig.rep || cur.detail !== orig.detail || Number(cur.repPay) !== Number(orig.repPay)) {
+        modified.push({
+          rep: repName, id: cur.id, customer: cur.customer,
+          orig: { rep: orig.rep, detail: orig.detail, repPay: orig.repPay },
+          edit: { rep: cur.rep, detail: cur.detail, repPay: cur.repPay }
+        });
+      }
+    }
+    // Added items
+    addList.forEach(it => added.push({ ...it, rep: repName }));
+  }
+  return { modified, added, deleted };
+}
+
+function showCodeModal(code, changes) {
+  const total = changes.modified.length + changes.added.length + changes.deleted.length;
+  const div = document.createElement('div');
+  div.className = 'modal-overlay';
+  div.id = 'codeModal';
+  div.innerHTML = `
+    <div class="modal">
+      <h3>Review Submitted ✓</h3>
+      <p>${total} change${total !== 1 ? 's' : ''} recorded for <strong>${PERIOD.from} – ${PERIOD.to}</strong>.<br>Copy the code below and send it to your admin.</p>
+      <div class="code-box" id="codeBox" onclick="copyCode()">${code}</div>
+      <div class="copy-confirm" id="copyConfirm">✓ Copied to clipboard!</div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button class="btn" onclick="document.getElementById('codeModal').remove()">Close</button>
+        <button class="btn primary" onclick="copyCode()">Copy Code</button>
+      </div>
+    </div>`;
+  document.body.appendChild(div);
+  window._submitCode = code;
+}
+
+function copyCode() {
+  const code = window._submitCode;
+  if (!code) return;
+  navigator.clipboard.writeText(code).then(() => {
+    const el = document.getElementById('copyConfirm');
+    if (el) { el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 2500); }
+  }).catch(() => {
+    // Fallback: select the code box
+    const box = document.getElementById('codeBox');
+    if (box) {
+      const range = document.createRange();
+      range.selectNode(box);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+    }
+  });
+}
+
+function escH(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ── boot ───────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
